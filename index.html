@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-	<link rel="manifest" href="manifest.json">
-	<meta name="theme-color" content="#004080">
-	<link rel="apple-touch-icon" href="icons/icon-192.png">
-
   <meta charset="UTF-8">
   <title>Κατανομή Εδρών</title>
   <style>
@@ -278,7 +274,7 @@
           </td>
           <td>${percentage.toFixed(2)}%</td>
           <td>${initialSeats}</td>
-          <td class="remainder-cell">${isActive ? remainder.toFixed(0) : '-'}</td>
+          <td class="remainder-cell">${isActive ? remainder.toFixed(2) : '-'}</td>
           <td>${isActive ? finalSeatCount : '0'}</td>
           <td><button onclick="removeParty('${party}')">Διαγραφή</button></td>
         `;
@@ -344,7 +340,7 @@
         const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
         const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
         
-        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(0) : '-'},${finalSeatCount}\n`;
+        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(2) : '-'},${finalSeatCount}\n`;
       });
       
       // Προσθήκη λευκών και άκυρων
@@ -370,18 +366,5 @@
       document.body.removeChild(link);
     }
   </script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(function(registration) {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }, function(error) {
-          console.log('ServiceWorker registration failed: ', error);
-        });
-    });
-  }
-</script>
-
 </body>
 </html>
