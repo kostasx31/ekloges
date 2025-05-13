@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Κατανομή Εδρών ΔΣ Φοιτητικού Συλλόγου</title>
+  <title>Κατανομή Εδρών</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
@@ -57,7 +57,7 @@
     
     .info-box {
       background: #f9f9f9;
-      padding: 7px;
+      padding: 3px;
       margin: 0px 0;
       border-radius: 5px;
     }
@@ -103,10 +103,8 @@
     }
     
     .chart-container {
-      position: relative;
       margin: 20px 0;
       height: 300px;
-      width: 100%;
     }
     
     /* Mobile styles */
@@ -157,7 +155,7 @@
     @media (max-width: 480px) {
       .info-box label {
         display: block;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
       }
       
       .info-box label:last-child {
@@ -165,7 +163,7 @@
       }
       
       .info-box div {
-        margin-top: 6px;
+        margin-top: 3px;
       }
       
       input[type="text"], input[type="number"] {
@@ -181,7 +179,7 @@
 <body>
   <h2>Κατανομή Εδρών ΔΣ Φοιτητικού Συλλόγου</h2>
 
-  <div class="info-box">
+  <div>
     <label>Αριθμός Εδρών ΔΣ:
       <select id="totalSeats" onchange="saveData(); calculate();">
         <option value="5">5</option>
@@ -192,16 +190,15 @@
         <option value="15">15</option>
       </select>
     </label>
-	<br>
 	
-    <div class="info-box">
+    <div>
 		<label for="invalidVotes">Άκυρα:</label>
 		<input type="number" id="invalidVotes" value="0" min="0" onchange="saveData(); calculate();">
 		<button onclick="changeVotesValue('invalidVotes', 1)">+</button>
 		<button onclick="changeVotesValue('invalidVotes', -1)">−</button>
 	</div>
 
-	<div class="info-box">
+	<div>
 		<label for="whiteVotes">Λευκά:</label>
 		<input type="number" id="whiteVotes" value="0" min="0" onchange="saveData(); calculate();">
 		<button onclick="changeVotesValue('whiteVotes', 1)">+</button>
@@ -237,7 +234,7 @@
   </div>
 
   <div class="chart-container">
-    <canvas id="seatsChart" width="400" height="300"></canvas>
+    <canvas id="seatsChart"></canvas>
   </div>
 
   <div style="margin-top: 12px;">
@@ -266,18 +263,12 @@
 
     window.onload = function() {
       loadData();
-      initializeChart();
       updateTable();
+      initializeChart();
     };
 
     function initializeChart() {
       const ctx = document.getElementById('seatsChart').getContext('2d');
-      
-      // Destroy previous chart if it exists
-      if (seatsChart) {
-        seatsChart.destroy();
-      }
-      
       seatsChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -285,58 +276,20 @@
           datasets: [{
             label: 'Τελικές Έδρες',
             data: [],
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.7)',
-              'rgba(54, 162, 235, 0.7)',
-              'rgba(255, 206, 86, 0.7)',
-              'rgba(75, 192, 192, 0.7)',
-              'rgba(153, 102, 255, 0.7)',
-              'rgba(255, 159, 64, 0.7)',
-              'rgba(199, 199, 199, 0.7)'
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)',
-              'rgba(199, 199, 199, 1)'
-            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+            borderColor: 'rgba(54, 162, 235, 1)',
             borderWidth: 1
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Κατανομή Εδρών ανά Παράταξη',
-              font: {
-                size: 16
-              }
-            }
-          },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
                 stepSize: 1,
                 precision: 0
-              },
-              title: {
-                display: true,
-                text: 'Αριθμός Εδρών'
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Παράταξη'
               }
             }
           }
@@ -350,31 +303,14 @@
       
       const labels = [];
       const data = [];
-      const backgroundColors = [];
-      const borderColors = [];
       
-      // Predefined colors for up to 7 parties
-      const colorPalette = [
-        'rgba(255, 99, 132, 0.7)',
-        'rgba(54, 162, 235, 0.7)',
-        'rgba(255, 206, 86, 0.7)',
-        'rgba(75, 192, 192, 0.7)',
-        'rgba(153, 102, 255, 0.7)',
-        'rgba(255, 159, 64, 0.7)',
-        'rgba(199, 199, 199, 0.7)'
-      ];
-      
-      activeParties.forEach((party, index) => {
+      activeParties.forEach(party => {
         labels.push(party);
         data.push(finalSeats[party] || 0);
-        backgroundColors.push(colorPalette[index % colorPalette.length]);
-        borderColors.push(colorPalette[index % colorPalette.length].replace('0.7', '1'));
       });
       
       seatsChart.data.labels = labels;
       seatsChart.data.datasets[0].data = data;
-      seatsChart.data.datasets[0].backgroundColor = backgroundColors;
-      seatsChart.data.datasets[0].borderColor = borderColors;
       seatsChart.update();
     }
 
@@ -383,11 +319,11 @@
     }
 
     function getTotalValidVotes() {
-      return getActiveParties().reduce((sum, party) => sum + voteCounts[party], 0) + parseInt(document.getElementById("whiteVotes").value);
+      return getActiveParties().reduce((sum, party) => sum + voteCounts[party], 0)+ parseInt(document.getElementById("whiteVotes").value);
     }
 
     function getTotalVotes() {
-      return getTotalValidVotes() + parseInt(document.getElementById("invalidVotes").value);
+      return getTotalValidVotes()  + parseInt(document.getElementById("invalidVotes").value);
     }
 
     function changeVotesValue(id, delta) {
