@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+	<link rel="manifest" href="manifest.json">
+	<meta name="theme-color" content="#004080">
+	<link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <meta charset="UTF-8">
+  <title>Κατανομή Εδρών</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+      border-collapse: collapse;
+      padding: 6px;
+      text-align: center;
+    }
+    input[type="text"], input[type="number"] {
+      width: 80px;
+    }
+    .info-box {
+      background: #f9f9f9;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    .measure-box {
+      background: #e6f7ff;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .remainder-cell {
+      background: #fff8e6;
+    }
+    .tie-message {
+      color: red;
+      font-weight: bold;
+    }
+    button {
+      margin: 2px;
+      padding: 4px 8px;
+    }
+    .zero-votes {
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h2>Κατανομή Εδρών Φοιτητικού Συλλόγου</h2>
+
+  <div class="info-box">
+    <label>Αριθμός Εδρών:
+      <select id="totalSeats" onchange="saveData(); calculate();">
+        <option value="5">5</option>
+        <option value="7">7</option>
+        <option value="9" selected>9</option>
+        <option value="11">11</option>
+        <option value="13">13</option>
+        <option value="15">15</option>
+      </select>
+    </label>
+
+    <div style="margin-top: 10px;">
+      <label>Άκυρα:
+        <input type="number" style="text-align: right;" id="invalidVotes" value="0" min="0" onchange="saveData(); calculate();">
+        <button onclick="changeVotesValue('invalidVotes', 1)">+</button>
+        <button onclick="changeVotesValue('invalidVotes', -1)">−</button>
+      </label>
+      
+      <label style="margin-left: 15px;">Λευκά:
+        <input type="number" style="text-align: right;" id="whiteVotes" value="0" min="0" onchange="saveData(); calculate();">
+        <button onclick="changeVotesValue('whiteVotes', 1)">+</button>
+        <button onclick="changeVotesValue('whiteVotes', -1)">−</button>
+      </label>
+    </div>
+  </div>
+
+  <div class="measure-box">
+    <strong>Μέτρο:</strong> <span id="measureValue">0</span> ψήφοι ανά έδρα | 
+    <strong>Σύνολο Ψηφισάντων:</strong> <span id="totalVotedValue">0</span> |
+    <strong>Έγκυρες Ψήφοι:</strong> <span id="validVotesValue">0</span> |
+	<p>
+    <strong class="tie-message" id="tieMessage"></strong>
+	</p>
+  </div>
+
+  <table id="votesTable">
+    <tr>
+      <th>Παράταξη</th>
+      <th>Ψήφοι</th>
+      <th>+ / −</th>
+      <th>Ποσοστό</th>
+      <th>Έδρες (1η κατανομή)</th>
+      <th>Υπόλοιπο (ψήφοι)</th>
+      <th>Τελικές Έδρες</th>
+      <th>Διαγραφή</th>
+    </tr>
+  </table>
+
+  <div style="margin-top: 15px;">
+    <input type="text" id="newPartyName" placeholder="Νέα Παράταξη">
+    <button onclick="addParty()">Προσθήκη Παράταξης</button>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <button onclick="calculate()">Υπολογισμός Εδρών</button>
+    <button onclick="resetAll()">Επαναφορά</button>
+    <button onclick="exportCSV()">Εξαγωγή CSV</button>
+  </div>
+
+  <script>
+    let voteCounts = {
+      "ΡΕΒΑΝΣ": 0,
+      "ΔΑΠ": 0,
+      "ΠΚΣ": 0,
+      "ΕΑΑΚ": 0,
+      "ATTACK": 0,
+      "ΠΑΣΠ": 0,
+      "ΔΙΚΤΥΟ": 0
+    };
+
+    window.onload = function() {
+      loadData();
+      updateTable();
+    };
+
+    function getActiveParties() {
+      return Object.keys(voteCounts).filter(party => voteCounts[party] > 0);
+    }
+
+    function getTotalValidVotes() {
+      return getActiveParties().reduce((sum, party) => sum + voteCounts[party], 0)+ parseInt(document.getElementById("whiteVotes").value);
+    }
+
+    function getTotalVotes() {
+      return getTotalValidVotes()  + parseInt(document.getElementById("invalidVotes").value);
+    }
+
+    function changeVotesValue(id, delta) {
+      const input = document.getElementById(id);
+      input.value = Math.max(0, parseInt(input.value) + delta);
+      saveData();
+      calculate();
+    }
+
+    function changeVotes(party, delta) {
+      voteCounts[party] = Math.max(0, voteCounts[party] + delta);
+      saveData();
+      updateTable();
+      calculate();
+    }
+
+    function addParty() {
+      const partyName = document.getElementById("newPartyName").value.trim();
+      if (partyName && !voteCounts[partyName]) {
+        voteCounts[partyName] = 0;
+        document.getElementById("newPartyName").value = "";
+        saveData();
+        updateTable();
+        calculate();
+      }
+    }
+
+    function removeParty(party) {
+      if (confirm(`Θέλετε να διαγράψετε την παράταξη "${party}";`)) {
+        delete voteCounts[party];
+        saveData();
+        updateTable();
+        calculate();
+      }
+    }
+
+    function calculateMeasure() {
+      const totalSeats = parseInt(document.getElementById("totalSeats").value);
+      const totalVotes = getTotalValidVotes();
+      return totalVotes > 0 ? (totalVotes / totalSeats) : 0;
+    }
+
+    function calculateInitialSeats(party) {
+      const measure = calculateMeasure();
+      if (measure === 0 || voteCounts[party] === 0) return 0;
+      return Math.floor(voteCounts[party] / measure);
+    }
+
+    function calculateRemainder(party, initialSeats) {
+      const measure = calculateMeasure();
+      if (measure === 0 || voteCounts[party] === 0) return 0;
+      return voteCounts[party] - (initialSeats * measure);
+    }
+
+    function calculateFinalSeats() {
+      const totalSeats = parseInt(document.getElementById("totalSeats").value);
+      const totalVotes = getTotalValidVotes();
+      const measure = calculateMeasure();
+      const activeParties = getActiveParties();
+      
+      if (totalVotes === 0 || activeParties.length === 0) return {};
+      
+      // 1η Κατανομή (μόνο για παρατάξεις με ψήφους)
+      let initialSeats = {};
+      let remainingSeats = totalSeats;
+      
+      activeParties.forEach(party => {
+        initialSeats[party] = calculateInitialSeats(party);
+        remainingSeats -= initialSeats[party];
+      });
+      
+      // 2η Κατανομή (από υπόλοιπα)
+      let remainders = {};
+      activeParties.forEach(party => {
+        remainders[party] = calculateRemainder(party, initialSeats[party]);
+      });
+      
+      // Ταξινόμηση κατά το υπόλοιπο
+      const sortedParties = activeParties.sort((a, b) => remainders[b] - remainders[a]);
+      
+      // Έλεγχος για ισοπαλία
+      const maxRemainder = remainders[sortedParties[0]];
+      const tiedParties = sortedParties.filter(party => 
+        Math.abs(remainders[party] - maxRemainder) < 0.0001 && remainders[party] > 0
+      );
+      
+      if (tiedParties.length > 1 && remainingSeats > 0) {
+        document.getElementById("tieMessage").textContent = `ΙΣΟΠΑΛΙΑ: ${tiedParties.join(", ")} (Κλήρωση)`;
+        return initialSeats;
+      } else {
+        document.getElementById("tieMessage").textContent = "";
+      }
+      
+      // Κατανομή των υπολειπόμενων εδρών
+      for (let i = 0; i < remainingSeats; i++) {
+        if (sortedParties.length === 0) break;
+        const party = sortedParties[i % sortedParties.length];
+        initialSeats[party] = (initialSeats[party] || 0) + 1;
+      }
+      
+      return initialSeats;
+    }
+
+    function updateTable() {
+      const table = document.getElementById("votesTable");
+      while (table.rows.length > 1) table.deleteRow(1);
+      
+      const totalVotes = getTotalValidVotes();
+      const validVotes = getTotalValidVotes();
+      const measure = calculateMeasure();
+      const finalSeats = calculateFinalSeats();
+      const hasTie = document.getElementById("tieMessage").textContent !== "";
+      
+      document.getElementById("measureValue").textContent = measure.toFixed(2);
+      document.getElementById("totalVotedValue").textContent = getTotalVotes();
+      document.getElementById("validVotesValue").textContent = validVotes;
+      
+      Object.keys(voteCounts).forEach(party => {
+        const row = table.insertRow();
+        const votes = voteCounts[party];
+        const isActive = votes > 0;
+        const rowClass = isActive ? "" : "zero-votes";
+        const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+        const initialSeats = isActive ? calculateInitialSeats(party) : 0;
+        const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
+        const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
+        
+        row.className = rowClass;
+        row.innerHTML = `
+          <td>${party}</td>
+		  <td><input type="number" style="text-align: right;" value="${votes}" onchange="changeVotes('${party}', this.value)"></td>   
+          <td>
+            <button onclick="changeVotes('${party}', 1)">+</button>
+            <button onclick="changeVotes('${party}', -1)">−</button>
+          </td>
+          <td>${percentage.toFixed(2)}%</td>
+          <td>${initialSeats}</td>
+          <td class="remainder-cell">${isActive ? remainder.toFixed(0) : '-'}</td>
+          <td>${isActive ? finalSeatCount : '0'}</td>
+          <td><button onclick="removeParty('${party}')">Διαγραφή</button></td>
+        `;
+      });
+    }
+
+    function calculate() {
+      updateTable();
+    }
+
+    function saveData() {
+      localStorage.setItem("votes", JSON.stringify(voteCounts));
+      localStorage.setItem("seats", document.getElementById("totalSeats").value);
+      localStorage.setItem("whiteVotes", document.getElementById("whiteVotes").value);
+      localStorage.setItem("invalidVotes", document.getElementById("invalidVotes").value);
+    }
+
+    function loadData() {
+      const savedVotes = localStorage.getItem("votes");
+      const savedSeats = localStorage.getItem("seats");
+      const savedWhiteVotes = localStorage.getItem("whiteVotes");
+      const savedInvalidVotes = localStorage.getItem("invalidVotes");
+      
+      if (savedVotes) voteCounts = JSON.parse(savedVotes);
+      if (savedSeats) document.getElementById("totalSeats").value = savedSeats;
+      if (savedWhiteVotes) document.getElementById("whiteVotes").value = savedWhiteVotes;
+      if (savedInvalidVotes) document.getElementById("invalidVotes").value = savedInvalidVotes;
+    }
+
+    function resetAll() {
+      if (confirm("Θέλετε να επαναφέρετε όλα τα δεδομένα;")) {
+        voteCounts = {
+          "ΡΕΒΑΝΣ": 0,
+          "ΔΑΠ": 0,
+          "ΠΚΣ": 0,
+          "ΕΑΑΚ": 0,
+          "ATTACK": 0,
+          "ΠΑΣΠ": 0,
+          "ΔΙΚΤΥΟ": 0
+        };
+        document.getElementById("totalSeats").value = "9";
+        document.getElementById("whiteVotes").value = "0";
+        document.getElementById("invalidVotes").value = "0";
+        saveData();
+        updateTable();
+      }
+    }
+
+    function exportCSV() {
+      let csv = "Παράταξη,Ψήφοι,Ποσοστό,Έδρες (1η κατανομή),Υπόλοιπο (ψήφοι),Τελικές Έδρες\n";
+      
+      const totalVotes = getTotalValidVotes();
+      const measure = calculateMeasure();
+      const finalSeats = calculateFinalSeats();
+      const hasTie = document.getElementById("tieMessage").textContent !== "";
+      const activeParties = getActiveParties();
+      
+      Object.keys(voteCounts).forEach(party => {
+        const votes = voteCounts[party];
+        const isActive = votes > 0;
+        const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+        const initialSeats = isActive ? calculateInitialSeats(party) : 0;
+        const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
+        const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
+        
+        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(0) : '-'},${finalSeatCount}\n`;
+      });
+      
+      // Προσθήκη λευκών και άκυρων
+      csv += `"Λευκά",${document.getElementById("whiteVotes").value},,,,\n`;
+      csv += `"Άκυρα",${document.getElementById("invalidVotes").value},,,,\n`;
+      
+      // Προσθήκη πληροφοριών
+      csv += `\n"Μέτρο","${measure.toFixed(2)} ψήφοι ανά έδρα","","","",""\n`;
+      csv += `"Σύνολο Ψηφισάντων","${getTotalVotes()}","","","",""\n`;
+      csv += `"Έγκυρες Ψήφοι","${getTotalValidVotes()}","","","",""\n`;
+      if (hasTie) {
+        csv += `"Ισοπαλία","${document.getElementById("tieMessage").textContent.replace("ΙΣΟΠΑΛΙΑ: ", "")}","","","",""\n`;
+      }
+      
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "κατανομή_εδρών.csv");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, function(error) {
+          console.log('ServiceWorker registration failed: ', error);
+        });
+    });
+  }
+</script>
+
+</body>
+</html>
