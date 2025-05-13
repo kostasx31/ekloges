@@ -430,7 +430,7 @@
         
         // Remainder
         cell = row.insertCell();
-        cell.textContent = isActive ? remainder.toFixed(0) : '-';
+        cell.textContent = isActive ? remainder.toFixed(2) : '-';
         cell.className = 'remainder-cell';
         
         // Final seats
@@ -505,7 +505,7 @@
         const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
         const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
         
-        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(0) : '-'},${finalSeatCount}\n`;
+        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(2) : '-'},${finalSeatCount}\n`;
       });
       
       // Προσθήκη λευκών και άκυρων
