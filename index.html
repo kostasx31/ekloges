@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Κατανομή Εδρών</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -34,14 +36,14 @@
       top: 0;
     }
     
-    /* Narrower columns */
+    /* Adjusted column order */
     th:nth-child(1), td:nth-child(1) { width: 15%; } /* Παράταξη */
     th:nth-child(2), td:nth-child(2) { width: 10%; } /* Ψήφοι */
     th:nth-child(3), td:nth-child(3) { width: 10%; } /* + / − */
     th:nth-child(4), td:nth-child(4) { width: 10%; } /* Ποσοστό */
-    th:nth-child(5), td:nth-child(5) { width: 10%; } /* Έδρες (1η κατανομή) */
+    th:nth-child(5), td:nth-child(5) { width: 10%; } /* Τελικές Έδρες */
     th:nth-child(6), td:nth-child(6) { width: 10%; } /* Υπόλοιπο */
-    th:nth-child(7), td:nth-child(7) { width: 10%; } /* Τελικές Έδρες */
+    th:nth-child(7), td:nth-child(7) { width: 10%; } /* Έδρες (1η κατανομή) */
     th:nth-child(8), td:nth-child(8) { width: 10%; } /* Διαγραφή */
     
     input[type="text"], input[type="number"] {
@@ -100,6 +102,11 @@
       color: #999;
     }
     
+    .chart-container {
+      margin: 20px 0;
+      height: 300px;
+    }
+    
     /* Mobile styles */
     @media (max-width: 768px) {
       body {
@@ -138,6 +145,10 @@
         font-size: 11px;
         min-width: 24px;
       }
+      
+      .chart-container {
+        height: 250px;
+      }
     }
     
     /* Very small screens adjustments */
@@ -158,6 +169,10 @@
       input[type="text"], input[type="number"] {
         width: 40px;
       }
+      
+      .chart-container {
+        height: 200px;
+      }
     }
   </style>
 </head>
@@ -176,7 +191,7 @@
       </select>
     </label>
 	<br>
-	<br>
+	
     <div class="info-box">
 		<label for="invalidVotes">Άκυρα:</label>
 		<input type="number" id="invalidVotes" value="0" min="0" onchange="saveData(); calculate();">
@@ -207,9 +222,9 @@
           <th>Ψήφοι</th>
           <th>+ / −</th>
           <th>Ποσοστό</th>
-          <th>Έδρες (1η κατανομή)</th>
-          <th>Υπόλοιπο</th>
           <th>Τελικές Έδρες</th>
+          <th>Υπόλοιπο</th>
+          <th>Έδρες (1η κατανομή)</th>
           <th>—</th>
         </tr>
       </thead>
@@ -217,6 +232,10 @@
         <!-- Rows will be inserted here by JavaScript -->
       </tbody>
     </table>
+  </div>
+
+  <div class="chart-container">
+    <canvas id="seatsChart"></canvas>
   </div>
 
   <div style="margin-top: 12px;">
@@ -227,12 +246,10 @@
   <div style="margin-top: 15px;">
     <button onclick="resetAll()">Επαναφορά</button>
     <button onclick="exportCSV()">Εξαγωγή CSV</button>
+    <button onclick="exportExcel()">Εξαγωγή Excel</button>
   </div>
 
   <script>
-    // Your existing JavaScript remains exactly the same
-    // Only the CSS has been modified as requested
-    
     let voteCounts = {
       "ΡΕΒΑΝΣ": 0,
       "ΔΑΠ": 0,
@@ -243,10 +260,60 @@
       "ΔΙΚΤΥΟ": 0
     };
 
+    let seatsChart = null;
+
     window.onload = function() {
       loadData();
       updateTable();
+      initializeChart();
     };
+
+    function initializeChart() {
+      const ctx = document.getElementById('seatsChart').getContext('2d');
+      seatsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Τελικές Έδρες',
+            data: [],
+            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateChart() {
+      const activeParties = getActiveParties();
+      const finalSeats = calculateFinalSeats();
+      
+      const labels = [];
+      const data = [];
+      
+      activeParties.forEach(party => {
+        labels.push(party);
+        data.push(finalSeats[party] || 0);
+      });
+      
+      seatsChart.data.labels = labels;
+      seatsChart.data.datasets[0].data = data;
+      seatsChart.update();
+    }
 
     function getActiveParties() {
       return Object.keys(voteCounts).filter(party => voteCounts[party] > 0);
@@ -420,18 +487,18 @@
         cell = row.insertCell();
         cell.textContent = percentage.toFixed(2) + '%';
         
-        // Initial seats
+        // Final seats (moved to be before remainder)
         cell = row.insertCell();
-        cell.textContent = initialSeats;
+        cell.textContent = isActive ? finalSeatCount : '0';
         
         // Remainder
         cell = row.insertCell();
         cell.textContent = isActive ? remainder.toFixed(2) : '-';
         cell.className = 'remainder-cell';
         
-        // Final seats
+        // Initial seats (moved to after remainder)
         cell = row.insertCell();
-        cell.textContent = isActive ? finalSeatCount : '0';
+        cell.textContent = initialSeats;
         
         // Delete button
         cell = row.insertCell();
@@ -440,6 +507,8 @@
         delBtn.onclick = function() { removeParty(party); };
         cell.appendChild(delBtn);
       });
+      
+      updateChart();
     }
 
     function calculate() {
@@ -485,7 +554,7 @@
     }
 
     function exportCSV() {
-      let csv = "Παράταξη,Ψήφοι,Ποσοστό,Έδρες (1η κατανομή),Υπόλοιπο (ψήφοι),Τελικές Έδρες\n";
+      let csv = "Παράταξη,Ψήφοι,Ποσοστό,Τελικές Έδρες,Υπόλοιπο (ψήφοι),Έδρες (1η κατανομή)\n";
       
       const totalVotes = getTotalValidVotes();
       const measure = calculateMeasure();
@@ -501,7 +570,7 @@
         const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
         const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
         
-        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${initialSeats},${isActive ? remainder.toFixed(2) : '-'},${finalSeatCount}\n`;
+        csv += `"${party}",${votes},${percentage.toFixed(2)}%,${finalSeatCount},${isActive ? remainder.toFixed(2) : '-'},${initialSeats}\n`;
       });
       
       // Προσθήκη λευκών και άκυρων
@@ -525,6 +594,60 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+
+    function exportExcel() {
+      const wb = XLSX.utils.book_new();
+      const wsData = [];
+      
+      // Add headers
+      wsData.push(["Παράταξη", "Ψήφοι", "Ποσοστό", "Τελικές Έδρες", "Υπόλοιπο (ψήφοι)", "Έδρες (1η κατανομή)"]);
+      
+      const totalVotes = getTotalValidVotes();
+      const measure = calculateMeasure();
+      const finalSeats = calculateFinalSeats();
+      const hasTie = document.getElementById("tieMessage").textContent !== "";
+      const activeParties = getActiveParties();
+      
+      // Add party data
+      Object.keys(voteCounts).forEach(party => {
+        const votes = voteCounts[party];
+        const isActive = votes > 0;
+        const percentage = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
+        const initialSeats = isActive ? calculateInitialSeats(party) : 0;
+        const remainder = isActive ? calculateRemainder(party, initialSeats) : 0;
+        const finalSeatCount = (hasTie || !isActive) ? initialSeats : (finalSeats[party] || 0);
+        
+        wsData.push([
+          party,
+          votes,
+          percentage.toFixed(2) + "%",
+          finalSeatCount,
+          isActive ? remainder.toFixed(2) : '-',
+          initialSeats
+        ]);
+      });
+      
+      // Add white and invalid votes
+      wsData.push(["Λευκά", document.getElementById("whiteVotes").value, "", "", "", ""]);
+      wsData.push(["Άκυρα", document.getElementById("invalidVotes").value, "", "", "", ""]);
+      
+      // Add empty row
+      wsData.push([]);
+      
+      // Add summary info
+      wsData.push(["Μέτρο", `${measure.toFixed(2)} ψήφοι ανά έδρα`, "", "", "", ""]);
+      wsData.push(["Σύνολο Ψηφισάντων", getTotalVotes(), "", "", "", ""]);
+      wsData.push(["Έγκυρες Ψήφοι", getTotalValidVotes(), "", "", "", ""]);
+      if (hasTie) {
+        wsData.push(["Ισοπαλία", document.getElementById("tieMessage").textContent.replace("ΙΣΟΠΑΛΙΑ: ", ""), "", "", "", ""]);
+      }
+      
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      XLSX.utils.book_append_sheet(wb, ws, "Κατανομή Εδρών");
+      
+      // Generate and download the file
+      XLSX.writeFile(wb, "κατανομή_εδρών.xlsx");
     }
   </script>
 </body>
