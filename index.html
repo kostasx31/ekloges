@@ -55,8 +55,8 @@
     
     .info-box {
       background: #f9f9f9;
-      padding: 12px;
-      margin: 15px 0;
+      padding: 7px;
+      margin: 0px 0;
       border-radius: 5px;
     }
     
@@ -162,10 +162,10 @@
   </style>
 </head>
 <body>
-  <h2>Κατανομή Εδρών Φοιτητικού Συλλόγου</h2>
+  <h2>Κατανομή Εδρών ΔΣ Φοιτητικού Συλλόγου</h2>
 
   <div class="info-box">
-    <label>Αριθμός Εδρών:
+    <label>Αριθμός Εδρών ΔΣ:
       <select id="totalSeats" onchange="saveData(); calculate();">
         <option value="5">5</option>
         <option value="7">7</option>
@@ -175,20 +175,21 @@
         <option value="15">15</option>
       </select>
     </label>
+	<br>
+	<br>
+    <div class="info-box">
+		<label for="invalidVotes">Άκυρα:</label>
+		<input type="number" id="invalidVotes" value="0" min="0" onchange="saveData(); calculate();">
+		<button onclick="changeVotesValue('invalidVotes', 1)">+</button>
+		<button onclick="changeVotesValue('invalidVotes', -1)">−</button>
+	</div>
 
-    <div style="margin-top: 10px;">
-      <label>Άκυρα:
-        <input type="number" id="invalidVotes" value="0" min="0" onchange="saveData(); calculate();">
-        <button onclick="changeVotesValue('invalidVotes', 1)">+</button>
-        <button onclick="changeVotesValue('invalidVotes', -1)">−</button>
-      </label>
-      
-      <label style="margin-left: 15px;">Λευκά:
-        <input type="number" id="whiteVotes" value="0" min="0" onchange="saveData(); calculate();">
-        <button onclick="changeVotesValue('whiteVotes', 1)">+</button>
-        <button onclick="changeVotesValue('whiteVotes', -1)">−</button>
-      </label>
-    </div>
+	<div class="info-box">
+		<label for="whiteVotes">Λευκά:</label>
+		<input type="number" id="whiteVotes" value="0" min="0" onchange="saveData(); calculate();">
+		<button onclick="changeVotesValue('whiteVotes', 1)">+</button>
+		<button onclick="changeVotesValue('whiteVotes', -1)">−</button>
+		</div>
   </div>
 
   <div class="measure-box">
@@ -209,7 +210,7 @@
           <th>Έδρες (1η κατανομή)</th>
           <th>Υπόλοιπο</th>
           <th>Τελικές Έδρες</th>
-          <th>Διαγραφή</th>
+          <th>—</th>
         </tr>
       </thead>
       <tbody>
@@ -435,7 +436,7 @@
         // Delete button
         cell = row.insertCell();
         const delBtn = document.createElement('button');
-        delBtn.textContent = 'Διαγραφή';
+        delBtn.textContent = '—';
         delBtn.onclick = function() { removeParty(party); };
         cell.appendChild(delBtn);
       });
